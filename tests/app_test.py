@@ -8,7 +8,9 @@ TEST_DB = "test.db"
 # Flask-SQLAlchemy reads the database URI only once, when the app is imported,
 # so point it at the test database before importing (otherwise the tests would
 # run against, and drop, the real flaskr.db)
-os.environ["DATABASE_URL"] = f"sqlite:///{Path(__file__).resolve().parent.parent.joinpath(TEST_DB)}"
+os.environ["DATABASE_URL"] = (
+    f"sqlite:///{Path(__file__).resolve().parent.parent.joinpath(TEST_DB)}"
+)
 
 from project.app import app, db
 from project.models import Post
