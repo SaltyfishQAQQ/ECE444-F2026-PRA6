@@ -3,9 +3,14 @@ import os
 import pytest
 from pathlib import Path
 
-from project.app import app, init_db
-
 TEST_DB = "test.db"
+
+# Flask-SQLAlchemy reads the database URI only once, when the app is imported,
+# so point it at the test database before importing (otherwise the tests would
+# run against, and drop, the real flaskr.db)
+os.environ["DATABASE_URL"] = f"sqlite:///{Path(__file__).resolve().parent.parent.joinpath(TEST_DB)}"
+
+from project.app import app, db
 
 
 @pytest.fixture
@@ -13,10 +18,12 @@ def client():
     BASE_DIR = Path(__file__).resolve().parent.parent
     app.config["TESTING"] = True
     app.config["DATABASE"] = BASE_DIR.joinpath(TEST_DB)
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{BASE_DIR.joinpath(TEST_DB)}"
 
-    init_db() # setup
-    yield app.test_client() # tests run here
-    init_db() # teardown
+    with app.app_context():
+        db.create_all()  # setup
+        yield app.test_client()  # tests run here
+        db.drop_all()  # teardown
 
 
 def login(client, username, password):
