@@ -85,7 +85,11 @@ def test_messages(client):
 
 def test_delete_message(client):
     """Ensure the messages are being deleted"""
-    rv = client.get('/delete/1')
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+    assert data["status"] == 0
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    rv = client.get("/delete/1")
     data = json.loads(rv.data)
     assert data["status"] == 1
 
@@ -143,3 +147,44 @@ def test_index_links_to_search(client):
     """Ensure the home page has a link to the search page"""
     rv = client.get("/")
     assert b'href="/search/"' in rv.data
+
+
+def test_delete_logged_out_is_unauthorized(client):
+    """Ensure deleting while logged out returns 401 and a 'Please log in.' message"""
+    rv = client.get("/delete/1")
+    assert rv.status_code == 401
+    assert json.loads(rv.data) == {"status": 0, "message": "Please log in."}
+
+
+def test_delete_logged_out_keeps_post(client):
+    """Ensure a logged-out delete request leaves the post in the database"""
+    add_posts(("Hello World", "first post"))
+    client.get("/delete/1")
+    assert db.session.get(Post, 1) is not None
+
+
+def test_delete_logged_in_removes_post(client):
+    """Ensure a logged-in user can delete a post from the database"""
+    add_posts(("Hello World", "first post"))
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    rv = client.get("/delete/1")
+    assert rv.status_code == 200
+    assert json.loads(rv.data)["status"] == 1
+    assert db.session.get(Post, 1) is None
+
+
+def test_delete_after_logout_is_unauthorized(client):
+    """Ensure logging out takes away the ability to delete"""
+    add_posts(("Hello World", "first post"))
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    logout(client)
+    rv = client.get("/delete/1")
+    assert rv.status_code == 401
+    assert db.session.get(Post, 1) is not None
+
+
+def test_delete_logged_out_flashes_message(client):
+    """Ensure the user is told to log in on the next page they load"""
+    client.get("/delete/1")
+    rv = client.get("/")
+    assert b"Please log in." in rv.data
