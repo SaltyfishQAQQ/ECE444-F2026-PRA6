@@ -103,6 +103,15 @@ def add_posts(*posts):
     db.session.commit()
 
 
+
+"""
+Test the search functionality
+
+They use a helper, add_posts(), which puts posts straight into the database. 
+That way the search tests don’t depend on login or adding posts working: 
+if search breaks, only search tests fail.
+"""
+
 def test_search_page(client):
     """Ensure the search page loads with a search box and no results"""
     rv = client.get("/search/")
@@ -150,6 +159,14 @@ def test_index_links_to_search(client):
     rv = client.get("/")
     assert b'href="/search/"' in rv.data
 
+
+"""
+Test the delete functionality
+
+The README's delete test only checks the JSON response, so I added tests that look in
+the database itself. They'd catch a route that says it succeeded without actually deleting, 
+and they test both sides: logged-out users are blocked, logged-in users aren't.
+"""
 
 def test_delete_logged_out_is_unauthorized(client):
     """Ensure deleting while logged out returns 401 and a 'Please log in.' message"""
